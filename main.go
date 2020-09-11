@@ -23,7 +23,7 @@ func gaugeTimer() *charts.Gauge {
 	gauge := charts.NewGauge()
 
 	m := make(map[string]interface{})
-	m["Wh"] = 0
+	m["%"] = 0
 	gauge.Add("BAT0", m)
 	gauge.SetGlobalOptions(charts.TitleOpts{Title: "Battery-Gauge"})
 	fn := fmt.Sprintf(`var xhttp = new XMLHttpRequest();
