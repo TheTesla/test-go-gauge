@@ -23,20 +23,20 @@ func gaugeTimer() *charts.Gauge {
 	gauge := charts.NewGauge()
 
 	m := make(map[string]interface{})
-	m["B"] = 0
-	gauge.Add("gauge1", m)
-	gauge.SetGlobalOptions(charts.TitleOpts{Title: "Gauge-timer"})
+	m["Wh"] = 0
+	gauge.Add("BAT0", m)
+	gauge.SetGlobalOptions(charts.TitleOpts{Title: "Battery-Gauge"})
 	fn := fmt.Sprintf(`var xhttp = new XMLHttpRequest();
 			var i = 0;
 			xhttp.onreadystatechange = function() {
 				i = xhttp.responseText;
-				option_%s.series[0].data[0].value = (i * 1).toFixed(2) - 0;
+				option_%s.series[0].data[0].value = (i * 1).toFixed(3) - 0;
 				myChart_%s.setOption(option_%s, true);
 			};
 			setInterval(function () {
   				xhttp.open('GET', 'val1', false);
 				xhttp.send();
-			}, 2000);
+			}, 200);
 		`, gauge.ChartID, gauge.ChartID, gauge.ChartID)
 	gauge.AddJSFuncs(fn)
 	return gauge
@@ -74,7 +74,7 @@ func val1Handler(w http.ResponseWriter, _ *http.Request) {
 
 
 	w.WriteHeader(http.StatusOK)
-	io.WriteString(w, strconv.FormatFloat(fbat/fbatmax*100, 'f', 1, 64))
+	io.WriteString(w, strconv.FormatFloat(fbat/fbatmax*100, 'f', 3, 64))
 }
 
 type router struct {
