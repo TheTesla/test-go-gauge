@@ -3,11 +3,13 @@ package main
 import (
 	"fmt"
 	"log"
-	"math/rand"
 	"net/http"
 	"path"
 	"os"
 	"io"
+	"io/ioutil"
+	"strconv"
+
 
 	"github.com/go-echarts/go-echarts/charts"
 )
@@ -17,31 +19,25 @@ const (
 	maxNum = 50
 )
 
-func gaugeBase() *charts.Gauge {
-	gauge := charts.NewGauge()
-	gauge.SetGlobalOptions(charts.TitleOpts{Title: "Gauge-base"})
-	m := make(map[string]interface{})
-	m["A"] = rand.Intn(50)
-	gauge.Add("gauge", m)
-	return gauge
-}
-
 func gaugeTimer() *charts.Gauge {
 	gauge := charts.NewGauge()
 
 	m := make(map[string]interface{})
-	m["B"] = rand.Intn(50)
+	m["B"] = 0
 	gauge.Add("gauge1", m)
 	gauge.SetGlobalOptions(charts.TitleOpts{Title: "Gauge-timer"})
 	fn := fmt.Sprintf(`var xhttp = new XMLHttpRequest();
 			var i = 0;
+			xhttp.onreadystatechange = function() {
+				i = xhttp.responseText;
+				option_%s.series[0].data[0].value = (i * 1).toFixed(2) - 0;
+				myChart_%s.setOption(option_%s, true);
+			};
 			setInterval(function () {
-  			xhttp.open('GET', 'val1', false);
-			xhttp.send();
-			i = xhttp.responseText;
-			option_%s.series[0].data[0].value = (i * 1).toFixed(2) - 0;
-			myChart_%s.setOption(option_%s, true);
-		}, 2000);`, gauge.ChartID, gauge.ChartID, gauge.ChartID)
+  				xhttp.open('GET', 'val1', false);
+				xhttp.send();
+			}, 2000);
+		`, gauge.ChartID, gauge.ChartID, gauge.ChartID)
 	gauge.AddJSFuncs(fn)
 	return gauge
 }
@@ -49,7 +45,6 @@ func gaugeTimer() *charts.Gauge {
 func gaugeHandler(w http.ResponseWriter, _ *http.Request) {
 	page := charts.NewPage(orderRouters("gauge")...)
 	page.Add(
-		gaugeBase(),
 		gaugeTimer(),
 	)
 	f, err := os.Create(getRenderPath("gauge.html"))
@@ -59,9 +54,27 @@ func gaugeHandler(w http.ResponseWriter, _ *http.Request) {
 	page.Render(w, f)
 }
 
+
+func check(e error) {
+    if e != nil {
+        panic(e)
+    }
+}
+
+
 func val1Handler(w http.ResponseWriter, _ *http.Request) {
+	sbat, err := ioutil.ReadFile("/sys/devices/LNXSYSTM:00/LNXSYBUS:00/PNP0A08:00/device:08/PNP0C09:00/PNP0C0A:00/power_supply/BAT0/energy_now")
+	check(err)
+	fbat, err := strconv.ParseFloat(string(sbat)[:len(sbat)-1], 64)
+	check(err)
+	sbatmax, err := ioutil.ReadFile("/sys/devices/LNXSYSTM:00/LNXSYBUS:00/PNP0A08:00/device:08/PNP0C09:00/PNP0C0A:00/power_supply/BAT0/energy_full")
+	check(err)
+	fbatmax, err := strconv.ParseFloat(string(sbatmax)[:len(sbatmax)-1], 64)
+	check(err)
+
+
 	w.WriteHeader(http.StatusOK)
-	io.WriteString(w, "42\n")
+	io.WriteString(w, strconv.FormatFloat(fbat/fbatmax*100, 'f', 1, 64))
 }
 
 type router struct {
